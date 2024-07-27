@@ -1,50 +1,65 @@
 import json
-import click  # type: ignore
-import requests  # type: ignore
+import click
+import requests
 
 
-def summarize(input_text: str):
+def summarize(input_text: str) -> str:
+    """
+    Summarize the given text into a single paragraph.
+
+    Parameters:
+    - input_text (str): The text to be summarized.
+
+    Returns:
+    - str: The summarized text or an error message if the request fails.
+    """
+    
     url = "http://localhost:11434/api/generate"
     headers = {"Content-Type": "application/json"}
     data = {
         "model": "qwen2:0.5b",
-        "prompt": f"""Summarize the text with one paragraph inside the triple quotes
-                    and return only the response ```{input_text}```""",
-        "stream": False}
+        "prompt": (
+            f"Summarize the following text into a single paragraph:\n"
+            f"```{input_text}```"
+        ),
+        "stream": False
+    }
 
-    response = requests.post(url, headers=headers, data=json.dumps(data))
+    try:
+        response = requests.post(url, headers=headers, data=json.dumps(data))
+        response.raise_for_status()  # Raise an HTTPError for bad responses
+        response_data = response.json()
+        return response_data.get("response", "No response field in the data")
 
-    if response.status_code == 200:
-        # print("successful request. now parsing response")
-        response_text = response.text
-        data = json.loads(response_text)
-        actual_response = data["response"]
-        return actual_response
-
-    else:
-        return "Error: " + response.status_code + response.text
+    except requests.RequestException as e:
+        return f"Request failed: {str(e)}"
 
 
 @click.command()
 @click.option(
-    "-t",
-    required=False,
+    "-t", "--text-file",
     type=click.File("r"),
-    help="The text to be summarized"
+    help="Path to a text file containing the text to be summarized."
 )
-@click.argument("words", type=str, nargs=-1)
-def main(t, words):
-    if t:
-        input_text = t.read()
-        click.echo(summarize(input_text=input_text))
+@click.argument("text", nargs=-1)
+def main(text_file, text):
+    """
+    CLI tool for summarizing text from a file or directly from command line arguments.
+
+    Parameters:
+    - text_file (file): The file to read the text from.
+    - text (tuple of str): Text to be summarized provided as command line arguments.
+    """
+    if text_file:
+        input_text = text_file.read()
+    elif text:
+        input_text = ' '.join(text)
+    else:
+        click.echo("Error: No input provided. Use -t for a file or provide text arguments.")
         return
 
-    if words:
-        input_text = ' '.join(list(words))
-        click.echo(summarize(input_text=input_text))
-        return
-
-    click.echo("Nothing was provided. Please provide a paragraph or a text file to summarize.")
+    summary = summarize(input_text)
+    click.echo(summary)
 
 
 if __name__ == "__main__":
