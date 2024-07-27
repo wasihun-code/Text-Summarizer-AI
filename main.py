@@ -49,6 +49,10 @@ def main(text_file, text):
     Parameters:
     - text_file (file): The file to read the text from.
     - text (tuple of str): Text to be summarized provided as command line arguments.
+    
+     Examples:
+    - Summarize a text file: python script.py -t myfile.txt
+    - Summarize text from command line: python script.py "This is a sample text to summarize."
     """
     if text_file:
         input_text = text_file.read()
@@ -56,6 +60,10 @@ def main(text_file, text):
         input_text = ' '.join(text)
     else:
         click.echo("Error: No input provided. Use -t for a file or provide text arguments.")
+        return
+
+    if not input_text:
+        click.echo("Error: Provided text is empty.")
         return
 
     summary = summarize(input_text)
